@@ -4,12 +4,13 @@ function TaskForm({ onAdd, onCancel }) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [priority, setPriority] = useState("Medium");
+  const [error, setError] = useState("");
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
     if (!title.trim()) {
-      alert("Please enter a task title.");
+      setError("Please enter a task title.");
       return;
     }
 
@@ -24,11 +25,19 @@ function TaskForm({ onAdd, onCancel }) {
       syncStatus: "pending"
     };
 
-    onAdd(newTask);
-
-    setTitle("");
-    setDescription("");
-    setPriority("Medium");
+    try {
+      await onAdd(newTask);
+      setTitle("");
+      setDescription("");
+      setPriority("Medium");
+      setError("");
+    } catch (submitError) {
+      setError(
+        submitError instanceof Error
+          ? submitError.message
+          : "The task could not be added to the queue.",
+      );
+    }
   };
 
   return (
@@ -56,7 +65,10 @@ function TaskForm({ onAdd, onCancel }) {
               type="text"
               placeholder="Enter task title"
               value={title}
-              onChange={(e) => setTitle(e.target.value)}
+              onChange={(e) => {
+                setTitle(e.target.value);
+                setError("");
+              }}
             />
           </div>
 
@@ -83,6 +95,8 @@ function TaskForm({ onAdd, onCancel }) {
               <option value="High">High</option>
             </select>
           </div>
+
+          {error && <p role="alert">{error}</p>}
 
           <div className="form-buttons">
 

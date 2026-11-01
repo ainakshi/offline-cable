@@ -190,6 +190,34 @@ body {
   font-size: 13px;
 }
 
+.sync-action {
+  align-items: center;
+  justify-content: center;
+}
+
+.sync-button {
+  border: none;
+  padding: 10px 16px;
+  border-radius: 8px;
+  background: #111827;
+  color: white;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.sync-button:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
+.sync-action p {
+  max-width: 280px;
+  margin: 8px 0 0;
+  color: #6b7280;
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+
 /* Responsive */
 
 @media (max-width: 650px) {

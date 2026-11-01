@@ -1,6 +1,8 @@
 import { useState } from "react";
 import "./App.css";
 import TaskForm from "./components/TaskForm";
+import SyncStatus from "./components/SyncStatus";
+import { addToQueue } from "./services/syncQueue";
 
 function App() {
   const [showForm, setShowForm] = useState(false);
@@ -29,8 +31,16 @@ function App() {
     },
   ]);
 
-  // Runs when a new task is submitted from TaskForm
-  const handleAddTask = (newTask) => {
+  const handleAddTask = async (newTask) => {
+    addToQueue({
+      taskId: newTask.id,
+      type: "ADD",
+      data: {
+        title: newTask.title,
+        priority: newTask.priority,
+      },
+    });
+
     setTasks((previousTasks) => [
       ...previousTasks,
       newTask,
@@ -115,25 +125,7 @@ function App() {
       </main>
 
 
-      {/* Footer / Summary */}
-      <footer className="summary">
-
-        <div>
-          <strong>8</strong>
-          <span>Synced</span>
-        </div>
-
-        <div>
-          <strong>2</strong>
-          <span>Pending</span>
-        </div>
-
-        <div>
-          <strong>1</strong>
-          <span>Conflict</span>
-        </div>
-
-      </footer>
+      <SyncStatus />
 
     </div>
   );
