@@ -1,6 +1,8 @@
+
 import { useState } from "react";
 import "./App.css";
 import TaskForm from "./components/TaskForm";
+import ConflictDemo from "./components/ConflictDemo";
 
 function App() {
   const [showForm, setShowForm] = useState(false);
@@ -8,28 +10,20 @@ function App() {
   const [tasks, setTasks] = useState([
     {
       id: 1,
-      title: "Complete DBMS Assignment",
-      description: "Finish chapter 4 questions",
+      title: "Complete project documentation",
+      description: "Prepare the project documentation.",
       priority: "High",
       syncStatus: "Synced",
     },
     {
       id: 2,
-      title: "Prepare Mini Project",
-      description: "Work on Offline Cable dashboard",
+      title: "Review pending tasks",
+      description: "Check tasks waiting for synchronization.",
       priority: "Medium",
       syncStatus: "Pending",
     },
-    {
-      id: 3,
-      title: "Submit SIH Documents",
-      description: "Review and submit final documents",
-      priority: "High",
-      syncStatus: "Conflict",
-    },
   ]);
 
-  // Runs when a new task is submitted from TaskForm
   const handleAddTask = (newTask) => {
     setTasks((previousTasks) => [
       ...previousTasks,
@@ -41,37 +35,21 @@ function App() {
 
   return (
     <div className="app">
-
-      {/* Header */}
       <header className="header">
         <div>
           <h1>Offline Cable</h1>
-          <p>Your tasks, available anywhere.</p>
-        </div>
-
-        <div className="connection-status">
-          <span className="status-dot"></span>
-          Offline
         </div>
       </header>
 
-
-      {/* Main Content */}
       <main className="main-content">
-
         <div className="tasks-header">
           <h2>My Tasks</h2>
 
-          <button
-            className="add-task-btn"
-            onClick={() => setShowForm(true)}
-          >
-            + Add Task
+          <button onClick={() => setShowForm(!showForm)}>
+            Add Task
           </button>
         </div>
 
-
-        {/* Add Task Form */}
         {showForm && (
           <TaskForm
             onAdd={handleAddTask}
@@ -79,20 +57,15 @@ function App() {
           />
         )}
 
-
-        {/* Task List */}
         <div className="task-list">
-
           {tasks.map((task) => (
             <div className="task-card" key={task.id}>
-
               <div className="task-content">
                 <h3>{task.title}</h3>
                 <p>{task.description}</p>
               </div>
 
               <div className="task-meta">
-
                 <span
                   className={`priority ${task.priority.toLowerCase()}`}
                 >
@@ -104,20 +77,15 @@ function App() {
                 >
                   {task.syncStatus}
                 </span>
-
               </div>
-
             </div>
           ))}
-
         </div>
 
+        <ConflictDemo />
       </main>
 
-
-      {/* Footer / Summary */}
       <footer className="summary">
-
         <div>
           <strong>8</strong>
           <span>Synced</span>
@@ -132,9 +100,7 @@ function App() {
           <strong>1</strong>
           <span>Conflict</span>
         </div>
-
       </footer>
-
     </div>
   );
 }
