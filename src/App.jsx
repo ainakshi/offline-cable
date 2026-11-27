@@ -1,48 +1,188 @@
-import { useState } from "react";
+
+import { useState, useEffect } from "react";
 import "./App.css";
 import TaskForm from "./components/TaskForm";
+import {
+  addTask,
+  getTasks,
+  updateTask,
+  deleteTask,
+} from "./database/storage";
 
 function App() {
   const [showForm, setShowForm] = useState(false);
+  const [editingTask, setEditingTask] = useState(null);
+  const [tasks, setTasks] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
-  const [tasks, setTasks] = useState([
-    {
-      id: 1,
-      title: "Complete DBMS Assignment",
-      description: "Finish chapter 4 questions",
-      priority: "High",
-      syncStatus: "Synced",
-    },
-    {
-      id: 2,
-      title: "Prepare Mini Project",
-      description: "Work on Offline Cable dashboard",
-      priority: "Medium",
-      syncStatus: "Pending",
-    },
-    {
-      id: 3,
-      title: "Submit SIH Documents",
-      description: "Review and submit final documents",
-      priority: "High",
-      syncStatus: "Conflict",
-    },
-  ]);
+  // Load tasks from IndexedDB when the application opens
+  useEffect(() => {
+    const loadTasks = async () => {
+      try {
+        const savedTasks = await getTasks();
 
-  // Runs when a new task is submitted from TaskForm
-  const handleAddTask = (newTask) => {
-    setTasks((previousTasks) => [
-      ...previousTasks,
-      newTask,
-    ]);
+        // Add demo tasks only when the database is empty
+        if (savedTasks.length === 0) {
+          const demoTasks = [
+            {
+              id: "1",
+              title: "Complete DBMS Assignment",
+              description: "Finish chapter 4 questions",
+              priority: "High",
+              completed: false,
+              createdAt: Date.now(),
+              updatedAt: Date.now(),
+              syncStatus: "synced",
+            },
+            {
+              id: "2",
+              title: "Prepare Mini Project",
+              description: "Work on Offline Cable dashboard",
+              priority: "Medium",
+              completed: false,
+              createdAt: Date.now(),
+              updatedAt: Date.now(),
+              syncStatus: "pending",
+            },
+            {
+              id: "3",
+              title: "Submit SIH Documents",
+              description: "Review and submit final documents",
+              priority: "High",
+              completed: false,
+              createdAt: Date.now(),
+              updatedAt: Date.now(),
+              syncStatus: "conflict",
+            },
+          ];
 
-    setShowForm(false);
+          for (const task of demoTasks) {
+            await addTask(task);
+          }
+
+          setTasks(demoTasks);
+        } else {
+          setTasks(savedTasks);
+        }
+      } catch (err) {
+        console.error("Error loading tasks:", err);
+        setError("Unable to load tasks from local storage.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadTasks();
+  }, []);
+
+  // Add a new task or update an existing task
+  const handleSaveTask = async (taskData) => {
+    try {
+      if (editingTask) {
+        const updatedTask = await updateTask(
+          editingTask.id,
+          {
+            ...taskData,
+            syncStatus: "pending",
+            updatedAt: Date.now(),
+          }
+        );
+
+        setTasks((previousTasks) =>
+          previousTasks.map((task) =>
+            task.id === editingTask.id ? updatedTask : task
+          )
+        );
+      } else {
+        const savedTask = await addTask(taskData);
+
+        setTasks((previousTasks) => [
+          ...previousTasks,
+          savedTask,
+        ]);
+      }
+
+      setShowForm(false);
+      setEditingTask(null);
+      setError("");
+    } catch (err) {
+      console.error("Error saving task:", err);
+      setError("Unable to save task. Please try again.");
+    }
   };
+
+  // Open the form with existing task details
+  const handleEditTask = (task) => {
+    setEditingTask(task);
+    setShowForm(true);
+  };
+
+  // Delete a task from IndexedDB and the UI
+  const handleDeleteTask = async (id) => {
+    const confirmed = window.confirm(
+      "Are you sure you want to delete this task?"
+    );
+
+    if (!confirmed) return;
+
+    try {
+      await deleteTask(id);
+
+      setTasks((previousTasks) =>
+        previousTasks.filter((task) => task.id !== id)
+      );
+
+      setError("");
+    } catch (err) {
+      console.error("Error deleting task:", err);
+      setError("Unable to delete task. Please try again.");
+    }
+  };
+
+  // Mark a task as completed or undo completion
+  const handleToggleComplete = async (task) => {
+    try {
+      const updatedTask = await updateTask(task.id, {
+        completed: !task.completed,
+        syncStatus: "pending",
+        updatedAt: Date.now(),
+      });
+
+      setTasks((previousTasks) =>
+        previousTasks.map((item) =>
+          item.id === task.id ? updatedTask : item
+        )
+      );
+
+      setError("");
+    } catch (err) {
+      console.error("Error updating task status:", err);
+      setError("Unable to update task. Please try again.");
+    }
+  };
+
+  // Close the form and clear edit mode
+  const handleCancelForm = () => {
+    setShowForm(false);
+    setEditingTask(null);
+  };
+
+  // Calculate actual task counts
+  const syncedCount = tasks.filter(
+    (task) => task.syncStatus === "synced"
+  ).length;
+
+  const pendingCount = tasks.filter(
+    (task) => task.syncStatus === "pending"
+  ).length;
+
+  const conflictCount = tasks.filter(
+    (task) => task.syncStatus === "conflict"
+  ).length;
 
   return (
     <div className="app">
-
-      {/* Header */}
       <header className="header">
         <div>
           <h1>Offline Cable</h1>
@@ -55,86 +195,112 @@ function App() {
         </div>
       </header>
 
-
-      {/* Main Content */}
       <main className="main-content">
-
         <div className="tasks-header">
           <h2>My Tasks</h2>
 
           <button
             className="add-task-btn"
-            onClick={() => setShowForm(true)}
+            onClick={() => {
+              setEditingTask(null);
+              setShowForm(true);
+            }}
           >
             + Add Task
           </button>
         </div>
 
+        {error && <p className="error-message">{error}</p>}
 
-        {/* Add Task Form */}
         {showForm && (
           <TaskForm
-            onAdd={handleAddTask}
-            onCancel={() => setShowForm(false)}
+            onAdd={handleSaveTask}
+            onCancel={handleCancelForm}
+            initialTask={editingTask}
           />
         )}
 
-
-        {/* Task List */}
         <div className="task-list">
+          {loading ? (
+            <p>Loading tasks...</p>
+          ) : tasks.length === 0 ? (
+            <p>No tasks yet. Add your first task!</p>
+          ) : (
+            tasks.map((task) => (
+              <div className="task-card" key={task.id}>
+                <div className="task-content">
+                  <h3
+                    style={{
+                      textDecoration: task.completed
+                        ? "line-through"
+                        : "none",
+                      opacity: task.completed ? 0.6 : 1,
+                    }}
+                  >
+                    {task.title}
+                  </h3>
 
-          {tasks.map((task) => (
-            <div className="task-card" key={task.id}>
+                  <p>{task.description}</p>
+                </div>
 
-              <div className="task-content">
-                <h3>{task.title}</h3>
-                <p>{task.description}</p>
+                <div className="task-meta">
+                  <span
+                    className={`priority ${task.priority.toLowerCase()}`}
+                  >
+                    {task.priority}
+                  </span>
+
+                  <span
+                    className={`sync-status ${task.syncStatus.toLowerCase()}`}
+                  >
+                    {task.syncStatus}
+                  </span>
+                </div>
+
+                <div className="task-actions">
+                  <button
+                    type="button"
+                    onClick={() => handleToggleComplete(task)}
+                  >
+                    {task.completed ? "Undo" : "Complete"}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleEditTask(task)}
+                  >
+                    Edit
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleDeleteTask(task.id)}
+                  >
+                    Delete
+                  </button>
+                </div>
               </div>
-
-              <div className="task-meta">
-
-                <span
-                  className={`priority ${task.priority.toLowerCase()}`}
-                >
-                  {task.priority}
-                </span>
-
-                <span
-                  className={`sync-status ${task.syncStatus.toLowerCase()}`}
-                >
-                  {task.syncStatus}
-                </span>
-
-              </div>
-
-            </div>
-          ))}
-
+            ))
+          )}
         </div>
-
       </main>
 
-
-      {/* Footer / Summary */}
       <footer className="summary">
-
         <div>
-          <strong>8</strong>
+          <strong>{syncedCount}</strong>
           <span>Synced</span>
         </div>
 
         <div>
-          <strong>2</strong>
+          <strong>{pendingCount}</strong>
           <span>Pending</span>
         </div>
 
         <div>
-          <strong>1</strong>
+          <strong>{conflictCount}</strong>
           <span>Conflict</span>
         </div>
-
       </footer>
-
     </div>
   );
 }

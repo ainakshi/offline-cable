@@ -1,9 +1,23 @@
-import { useState } from "react";
 
-function TaskForm({ onAdd, onCancel }) {
+import { useState, useEffect } from "react";
+
+function TaskForm({ onAdd, onCancel, initialTask }) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [priority, setPriority] = useState("Medium");
+
+  // Fill the form when editing an existing task
+  useEffect(() => {
+    if (initialTask) {
+      setTitle(initialTask.title);
+      setDescription(initialTask.description);
+      setPriority(initialTask.priority);
+    } else {
+      setTitle("");
+      setDescription("");
+      setPriority("Medium");
+    }
+  }, [initialTask]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -13,30 +27,25 @@ function TaskForm({ onAdd, onCancel }) {
       return;
     }
 
-    const newTask = {
-      id: crypto.randomUUID(),
+    const taskData = {
+      id: initialTask?.id || crypto.randomUUID(),
       title: title.trim(),
       description: description.trim(),
-      priority: priority,
-      completed: false,
-      createdAt: Date.now(),
+      priority,
+      completed: initialTask?.completed ?? false,
+      createdAt: initialTask?.createdAt || Date.now(),
       updatedAt: Date.now(),
-      syncStatus: "pending"
+      syncStatus: initialTask ? "pending" : "pending",
     };
 
-    onAdd(newTask);
-
-    setTitle("");
-    setDescription("");
-    setPriority("Medium");
+    onAdd(taskData);
   };
 
   return (
     <div className="form-overlay">
       <div className="task-form-container">
-
         <div className="form-header">
-          <h2>Add New Task</h2>
+          <h2>{initialTask ? "Edit Task" : "Add New Task"}</h2>
 
           <button
             type="button"
@@ -48,7 +57,6 @@ function TaskForm({ onAdd, onCancel }) {
         </div>
 
         <form onSubmit={handleSubmit}>
-
           <div className="form-group">
             <label>Task Title</label>
 
@@ -85,7 +93,6 @@ function TaskForm({ onAdd, onCancel }) {
           </div>
 
           <div className="form-buttons">
-
             <button
               type="button"
               className="cancel-button"
@@ -98,11 +105,9 @@ function TaskForm({ onAdd, onCancel }) {
               type="submit"
               className="add-button"
             >
-              Add Task
+              {initialTask ? "Save Changes" : "Add Task"}
             </button>
-
           </div>
-
         </form>
       </div>
     </div>
