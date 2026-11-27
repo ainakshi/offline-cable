@@ -1,15 +1,18 @@
-
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import "./App.css";
 import TaskForm from "./components/TaskForm";
 import {
   addTask,
   getTasks,
+  getTaskById,
   updateTask,
   deleteTask,
 } from "./database/storage";
+import { addToQueue } from "./services/syncQueue";
+import SyncStatus from "./components/SyncStatus";
 
 function App() {
+  const hasLoadedRef = useRef(false);
   const [showForm, setShowForm] = useState(false);
   const [editingTask, setEditingTask] = useState(null);
   const [tasks, setTasks] = useState([]);
@@ -18,7 +21,11 @@ function App() {
 
   // Load tasks from IndexedDB when the application opens
   useEffect(() => {
-    const loadTasks = async () => {
+  if (hasLoadedRef.current) return;
+
+  hasLoadedRef.current = true;
+
+  const loadTasks = async () => {
       try {
         const savedTasks = await getTasks();
 
@@ -75,42 +82,57 @@ function App() {
 
     loadTasks();
   }, []);
+// Add a new task or update an existing task
+const handleSaveTask = async (taskData) => {
+  try {
+    if (editingTask) {
+      const updatedTask = await updateTask(
+        editingTask.id,
+        {
+          ...taskData,
+          syncStatus: "pending",
+          updatedAt: Date.now(),
+        }
+      );
 
-  // Add a new task or update an existing task
-  const handleSaveTask = async (taskData) => {
-    try {
-      if (editingTask) {
-        const updatedTask = await updateTask(
-          editingTask.id,
-          {
-            ...taskData,
-            syncStatus: "pending",
-            updatedAt: Date.now(),
-          }
-        );
+      addToQueue({
+        type: "UPDATE",
+        taskId: updatedTask.id,
+        data: updatedTask,
+      });
 
-        setTasks((previousTasks) =>
-          previousTasks.map((task) =>
-            task.id === editingTask.id ? updatedTask : task
-          )
-        );
-      } else {
-        const savedTask = await addTask(taskData);
+      setTasks((previousTasks) =>
+        previousTasks.map((task) =>
+          task.id === editingTask.id ? updatedTask : task
+        )
+      );
+    } else {
+      const savedTask = await addTask({
+        ...taskData,
+        syncStatus: "pending",
+      });
 
-        setTasks((previousTasks) => [
-          ...previousTasks,
-          savedTask,
-        ]);
-      }
+      addToQueue({
+        type: "ADD",
+        taskId: savedTask.id,
+        data: savedTask,
+      });
 
-      setShowForm(false);
-      setEditingTask(null);
-      setError("");
-    } catch (err) {
-      console.error("Error saving task:", err);
-      setError("Unable to save task. Please try again.");
+      setTasks((previousTasks) => [
+        ...previousTasks,
+        savedTask,
+      ]);
     }
-  };
+
+    setShowForm(false);
+    setEditingTask(null);
+    setError("");
+  } catch (err) {
+    console.error("Error saving task:", err);
+    setError("Unable to save task. Please try again.");
+  }
+};
+
 
   // Open the form with existing task details
   const handleEditTask = (task) => {
@@ -119,48 +141,85 @@ function App() {
   };
 
   // Delete a task from IndexedDB and the UI
-  const handleDeleteTask = async (id) => {
-    const confirmed = window.confirm(
-      "Are you sure you want to delete this task?"
+const handleDeleteTask = async (id) => {
+  const confirmed = window.confirm(
+    "Are you sure you want to delete this task?"
+  );
+
+  if (!confirmed) return;
+
+  try {
+    const taskToDelete = tasks.find((task) => task.id === id);
+
+    if (!taskToDelete) return;
+
+    // Queue the task snapshot before deleting it locally
+    addToQueue({
+      type: "DELETE",
+      taskId: id,
+      data: taskToDelete,
+    });
+
+    await deleteTask(id);
+
+    setTasks((previousTasks) =>
+      previousTasks.filter((task) => task.id !== id)
     );
 
-    if (!confirmed) return;
+    setError("");
+  } catch (err) {
+    console.error("Error deleting task:", err);
+    setError("Unable to delete task. Please try again.");
+  }
+};
 
-    try {
-      await deleteTask(id);
 
-      setTasks((previousTasks) =>
-        previousTasks.filter((task) => task.id !== id)
-      );
+// Mark a task as completed or undo completion
+const handleToggleComplete = async (task) => {
+  try {
+    const updatedTask = await updateTask(task.id, {
+      completed: !task.completed,
+      syncStatus: "pending",
+      updatedAt: Date.now(),
+    });
 
-      setError("");
-    } catch (err) {
-      console.error("Error deleting task:", err);
-      setError("Unable to delete task. Please try again.");
-    }
-  };
+    addToQueue({
+      type: "UPDATE",
+      taskId: updatedTask.id,
+      data: updatedTask,
+    });
 
-  // Mark a task as completed or undo completion
-  const handleToggleComplete = async (task) => {
-    try {
-      const updatedTask = await updateTask(task.id, {
-        completed: !task.completed,
-        syncStatus: "pending",
-        updatedAt: Date.now(),
-      });
+    setTasks((previousTasks) =>
+      previousTasks.map((item) =>
+        item.id === task.id ? updatedTask : item
+      )
+    );
 
-      setTasks((previousTasks) =>
-        previousTasks.map((item) =>
-          item.id === task.id ? updatedTask : item
-        )
-      );
+    setError("");
+  } catch (err) {
+    console.error("Error updating task status:", err);
+    setError("Unable to update task. Please try again.");
+  }
+};
 
-      setError("");
-    } catch (err) {
-      console.error("Error updating task status:", err);
-      setError("Unable to update task. Please try again.");
-    }
-  };
+//syncing
+const handleOperationProcessed = async (operation) => {
+  const existingTask = await getTaskById(operation.taskId);
+
+  // Task may already have been deleted locally
+  if (!existingTask) return;
+
+  const updatedTask = await updateTask(operation.taskId, {
+    syncStatus: "synced",
+  });
+
+  setTasks((previousTasks) =>
+    previousTasks.map((task) =>
+      task.id === operation.taskId ? updatedTask : task
+    )
+  );
+};
+
 
   // Close the form and clear edit mode
   const handleCancelForm = () => {
@@ -300,9 +359,9 @@ function App() {
           <strong>{conflictCount}</strong>
           <span>Conflict</span>
         </div>
+        <SyncStatus onOperationProcessed={handleOperationProcessed} />
       </footer>
     </div>
   );
 }
-
 export default App;
