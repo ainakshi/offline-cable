@@ -179,10 +179,11 @@ const handleDeleteTask = async (id) => {
 const handleToggleComplete = async (task) => {
   try {
     const updatedTask = await updateTask(task.id, {
-      completed: !task.completed,
-      syncStatus: "pending",
-      updatedAt: Date.now(),
-    });
+  completed: !task.completed,
+  syncStatus: "pending",
+  // eslint-disable-next-line react-hooks/purity -- timestamp generated after user action
+  updatedAt: Date.now(),
+});
 
     addToQueue({
       type: "UPDATE",
