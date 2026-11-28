@@ -14,3 +14,17 @@ The React Compiler is not enabled on this template because of its impact on dev 
 ## Expanding the ESLint configuration
 
 If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+
+## Synchronization & Queue Management
+
+Implemented the synchronization queue management module.
+
+- Handles ADD, UPDATE and DELETE operations.
+- Maintains a queue of pending operations.
+- Processes queued operations sequentially.
+- Tracks operation status (Pending/Synced).
+- Supports local synchronization simulation for offline operations.
+
+## Contributors
+
+Agrim Sharma – Synchronization & Queue Management
