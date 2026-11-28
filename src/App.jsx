@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import "./App.css";
 import TaskForm from "./components/TaskForm";
+import ConflictDemo from "./components/ConflictDemo";
 import {
   addTask,
   getTasks,
@@ -342,6 +343,7 @@ const handleOperationProcessed = async (operation) => {
             ))
           )}
         </div>
+        <ConflictDemo />
       </main>
 
       <footer className="summary">
