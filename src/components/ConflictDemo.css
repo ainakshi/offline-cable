@@ -1,0 +1,66 @@
+
+.conflict-demo {
+  margin: 35px auto;
+  padding: 24px;
+  max-width: 1000px;
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.08);
+}
+
+.conflict-demo h2 {
+  margin-bottom: 20px;
+  color: #1e293b;
+}
+
+.conflict-demo .conflict-status {
+  color: #dc2626;
+}
+
+.conflict-demo .device-container {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+  margin-top: 20px;
+}
+
+.conflict-demo .device-card {
+  flex: 1;
+  min-width: 250px;
+  padding: 20px;
+  border: 1px solid #d1d5db;
+  border-radius: 10px;
+  background: #f8fafc;
+}
+
+.conflict-demo button {
+  padding: 9px 14px;
+  margin-top: 8px;
+  border: none;
+  border-radius: 6px;
+  background: #2563eb;
+  color: white;
+  cursor: pointer;
+}
+
+.conflict-demo button:hover {
+  background: #1d4ed8;
+}
+
+.conflict-demo .resolved-task {
+  margin-top: 25px;
+  padding: 20px;
+  border: 2px solid #16a34a;
+  border-radius: 10px;
+  background: #f0fdf4;
+}
+
+@media (max-width: 600px) {
+  .conflict-demo {
+    padding: 15px;
+  }
+
+  .conflict-demo .device-container {
+    flex-direction: column;
+  }
+}
